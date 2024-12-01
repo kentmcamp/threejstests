@@ -1348,19 +1348,123 @@ function update(renderer, scene, camera, controls) {
 
 ## Add More Objects to the Scene
 
+- For further testing, the single box object was replaced by a grid of boxes, creating using the following function:
+
+```jsx
+function getBoxGrid(amount, separationMultiplier) {
+  var group = new THREE.Group();
+
+  for (var i = 0; i < amount; i++) {
+    var obj = getBox(1, 1, 1);
+
+    obj.position.x = i * separationMultiplier;
+    obj.position.y = obj.geometry.parameters.height / 2;
+    group.add(obj);
+    for (var j = 1; j < amount; j++) {
+      var obj = getBox(1, 1, 1);
+      obj.position.x = i * separationMultiplier;
+      obj.position.y = obj.geometry.parameters.height / 2;
+      obj.position.z = j * separationMultiplier;
+      group.add(obj);
+    }
+  }
+  group.position.x = -(separationMultiplier * (amount - 1)) / 2;
+  group.position.z = -(separationMultiplier * (amount - 1)) / 2;
+
+  return group;
+}
+```
+
 ## SpotLight
+
+- A Spot Light is a light that is emitted from a single point in a specific direction via a cone.
+    - `var light = new THREE.SpotLight(0xffffff, intensity);`
+- Another property, `penumbra` changes the softness of a light.
+    - `gui.add(spotLight, "penumbra", 0, 1);`
+- You need to adjust the bias value on the light shadow to decrease artifacts that happens to shadows when softer, more detailed lighting is applied.
+- **Shadow Bias** is a small offset applied to the shadow map depth values to prevent self-shadowing artifacts. Increasing the bias can reduce `shadow acne` but can cause other artifact issues like `peter-panning` which is when shadows appeared detached from objects.
+    - `light.shadow.bias = 0.001;`
+- By default, shadow maps are `512 x 512` pixel resolution (this may of been updated to `1024 x 1024`. You can change it via the light’s `shadow.mapSize` width and height properties:
+
+    ```
+      light.shadow.mapSize.width = 2048;
+      light.shadow.mapSize.height = 2048;
+    ```
+
 
 ## DirectionalLight
 
+- A Directional Light is a **parallel** light ray that is emitted from a single point in a specific direction via a cone. These are used to simulate major lights like the sun.
+- `var light = new THREE.DirectionalLight(0xffffff, intensity);`
+- You can change the size of the light source with `shadow.camera`
+
+    ```
+      light.shadow.camera.left = -10;
+      light.shadow.camera.bottom = -10;
+      light.shadow.camera.right = 5;
+      light.shadow.camera.top = 5;
+    ```
+
+- This is a useful object to create a camera helper for. A camera helper is a wireframe that displays placement, scale, and rotation.
+- `var helper = new THREE.CameraHelper(directionalLight.shadow.camera);`
+
 ## AmbientLight
 
-## RectAreaLight
+- Ambient light is a light that is emitted from all directions. It is used to simulate the light that is reflected off the surfaces of the objects.
+- `var light = new THREE.AmbientLight(rgb(10,30,50), intensity);`
+    - Ambient Light does not cast shadows.
 
 # Animation
 
 ## Random() function
 
+- The `Math.random()` function is what it sounds like.
+
+```jsx
+function update(renderer, scene, camera, controls) {
+  renderer.render(scene, camera);
+
+  var boxGrid = scene.getObjectByName("boxGrid");
+  boxGrid.children.forEach(function (child) {
+    child.scale.y = Math.random();
+    child.position.y = child.scale.y / 2; // This will make the boxes stand on the plane.
+  })
+
+  controls.update();
+
+  requestAnimationFrame(function () {
+    update(renderer, scene, camera, controls);
+  });
+}
+```
+
+- Don’t forget to give the object your animating a name, such as [`boxGrid.name](http://boxgrid.name/) = "boxGrid";`
+    - Just because I named the variable boxGrid, does not mean that it’s name property is boxGrid, that has to be set manually.
+
 ## Math.sin() and Math.cos()
+
+- Sine and Cosine function generate a value between minus one and one.
+- We will use the `getElapsedTime()` method with `Math.sin()` to get the elapsed time since the start of the application and feed it into the sine function.
+- For the getElapsedTime() you need to create a clock object  with `var clockName = new THREE.Clock();` and pass it into the update function.
+
+```jsx
+function update(renderer, scene, camera, controls, clock) {
+  renderer.render(scene, camera);
+  controls.update();
+
+  var timeElapsed = clock.getElapsedTime(); // Time elapsed since the javascript started running.
+
+  var boxGrid = scene.getObjectByName("boxGrid");
+  boxGrid.children.forEach(function (child) {
+    child.scale.y = (Math.sin(timeElapsed * 2) + 1) / 2 + 0.001; // Sine function will give us a value between -1 and 1. We add 1 to make it between 0 and 2. Then we divide it by 2 to make it between 0 and 1. We add 0.001 to avoid the scale being 0 and the object entering the same plane as the ground plane. We can multiply the timeElapsed by a number to make the animation faster or slower, in this case 2.
+    child.position.y = child.scale.y / 2;
+  });
+
+  requestAnimationFrame(function () {
+    update(renderer, scene, camera, controls, clock);
+  });
+}
+```
 
 ## Add Noise
 
