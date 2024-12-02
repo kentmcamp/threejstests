@@ -1629,8 +1629,213 @@ Object.defineProperties( THREE.OrbitControls.prototype, {
 
 # Materials and Textures
 
+## MeshBasicMaterial
+
+- Here is a new function for easily getting different types of materials:
+
+    ```jsx
+    var sphereMaterial = getMaterial('basic', 'rgb(0, 0, 255)');
+    var sphere = getSphere(sphereMaterial, 1, 24);
+
+    var planeMaterial = getMaterial('basic', 'rgb(255, 0, 0)');
+    var plane = getPlane(planeMaterial, 30);
+
+    function getMaterial(type, color) {
+    	var selectedMaterial;
+    	var materialOptions = {
+    		color: color === undefined ? 'rgb(255, 255, 255)' : color,
+    	};
+
+    	switch (type) {
+    		case 'basic':
+    			selectedMaterial = new THREE.MeshBasicMaterial(materialOions);
+    			break;
+    		case 'lambert':
+    			selectedMaterial = new THREE.MeshLambertMaterial(materialOptions);
+    			break;
+    		case 'phong':
+    			selectedMaterial = new THREE.MeshPhongMaterial(materialOptions);
+    			break;
+    		case 'standard':
+    			selectedMaterial = new THREE.MeshStandardMaterial(materialOptions);
+    			break;
+    		default:
+    			selectedMaterial = new THREE.MeshBasicMaterial(materialOptions);
+    			break;
+    	}
+
+    	return selectedMaterial;
+    }
+    ```
+
+- `MeshBasicMaterial` - Most basic material in Three.js. Doesn't react to light. Renders the geometry with a solid color or texture, making it useful for flat, non-realistic objects or debugging purposes.
+    - `selectedMaterial = new THREE.MeshBasicMaterial(materialOptions);`
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/6e4f1703-05aa-48c7-8e5b-75f6c7a90caa/image.png)
+
+
+## MeshLambertMaterial and MeshPhongMaterial
+
+- `MeshLambertMaterial` - Reacts to light but does not produce sharp highlights. Simulates diffuse lighting (uniform light reflection). Ideal for matte or non-reflective surfaces that should appear soft.
+    - `selectedMaterial = new THREE.MeshLambertMaterial(materialOptions);`
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/cecc69a0-84d3-4303-8419-57c4da4f3259/image.png)
+
+- `MeshPhongMaterial` - Includes both diffuse and specular reflections. Useful for shiny, polished, more detailed highlights.
+    - `selectedMaterial = new THREE.MeshPhongMaterial(materialOptions);`
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/b1201da7-5dbf-4e20-8cba-08224c1b57a8/image.png)
+
+    - `Phong` material has a `shininess` property we can change to adjust specular light reflects (aka highlights).
+
+        ```jsx
+        var folder3 = gui.addFolder('Shininess');
+        folder3.add(sphereMaterial, 'shininess', 0, 1000);
+        ```
+
+        ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/41f0b36b-c29f-44a6-a30d-6259e7264a65/image.png)
+
+        ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/bdeb85c6-be48-4379-ab86-e0710d46199a/image.png)
+
+
+## MeshStandardMaterial
+
+- `MeshStandardMaterial` - A physically-based material (PBR). Creates more realistic lighting and shading effects. Uses the `metalness` / `roughness` model to most modern game engines and 3D renderers use. Both properties use a value between 0 and 1.
+    - `selectedMaterial = new THREE.MeshStandardMaterial(materialOptions);`
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/e3eb8c8d-467c-4cc9-94c3-cbf462c20b00/image.png)
+
+    - `Roughness` - Controls the surface’s smoothness and how it scatters light.  `0` is a smooth, polished surface and `1` is a rough, textured surface.
+    - `Metalness` - Controls the reflectivity and color of the reflections to simulate a metallic surface. `0` is non-metallic surface and `1` is a fully metallic surface.
+
+## Texture Maps
+
+### Texture Mapping
+
+- 2D images mapped to the material, which is wrapped around the mesh.
+- We first need to instantiate a texture loader object:
+    - `var loader = new THREE.TextureLoader();`
+- Then we map the texture image to the mesh’s material, in this case it’s a 64bit dirt texture:
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/31176245-d545-45dd-960b-41c8114c250e/image.png)
+
+    - `planeMaterial.map = loader.load('/src/textures/dirtFloor01.png');`
+- Finally, in order to tile the image (instead of just having it be 1x1 scale on the mesh surface) we save the loading code to it’s own variable, set the different axis to repeat, and then set how much we want it to repeat for axis:
+
+    ```
+    var texture = planeMaterial.map;
+    texture.wrapS = THREE.RepeatWrapping; // repeat along the x-axis
+    texture.wrapT = THREE.RepeatWrapping; // repeat along the y-axis
+    texture.repeat.set(10, 10); // how many times the image will repeat/tile.
+    ```
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/fcd4e414-e176-4df1-847f-d33f0846b6ff/image.png)
+
+- **NOTE:** In computer graphics (especially texture mapping), **`S`** and **`T`** are often used instead of `X` and `Y` for width and height. This is to avoid confusing texture mapping direction with the `X`, `Y`, and `Z` coordinates of objects in 3D space.
+
+### Bump Mapping
+
+- `Bump Maps` is a texture that is used to simulate the surface of the material in terms of how it reacts to lighting, without actually changing the geometry.
+- They use greyscale values to inform the lighting. So darker colored areas will have darker light and shadows, and lighter colored areas will have highlights and specular lighting.
+    - **NOTE:** The `bumpMap` doesn’t need to be greyscale itself, it is just that only it’s tonal values are used to inform the lighting, so if you need a `bumpMap` that is different then the texture image, you should just make it in greyscale.
+    - Since both the texture and bump map will need the same texture wrapping and tiling code, we can put it in a `forEach()` loop:
+    - `bumpScale` determines how strongly the effect is applied. It ranges from `0` to `1` .
+
+    ```jsx
+    	// Material Settings
+    	var loader = new THREE.TextureLoader();
+    	planeMaterial.map = loader.load('/src/textures/dirtFloor01.png');
+    	planeMaterial.bumpMap = loader.load('/src/textures/dirtFloor01.png');
+    	planeMaterial.bumpScale = 0.05;
+
+    	var maps = ['map', 'bumpMap'];
+    	maps.forEach(function(mapName) {
+    		var texture = planeMaterial[mapName];
+    		texture.wrapS = THREE.RepeatWrapping;
+    		texture.wrapT = THREE.RepeatWrapping;
+    		texture.repeat.set(10, 10);
+    	})
+    ```
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/f48f61f8-c162-4960-83c9-1d55e5bb159d/image.png)
+
+
+## Roughness Maps
+
+- Controls the roughness of t he material’s surface. Defines how smooth or rough the surface appears, affecting the way light scatters when it hits it.
+- Again they use the greyscale of an image, with dark values causing smoother areas (more reflective) and lighter areas representing rougher areas (less reflective).
+
+    ```jsx
+    // Material Settings
+    var loader = new THREE.TextureLoader();
+    planeMaterial.map = loader.load('/src/textures/dirtFloor01.png');
+    planeMaterial.bumpMap = loader.load('/src/textures/dirtFloor01.png');
+    planeMaterial.roughnessMap = loader.load('/src/textures/checkerboard.jpg');
+
+    planeMaterial.bumpScale = 0.05;
+
+    var maps = ['map', 'bumpMap', 'roughnessMap'];
+    maps.forEach(function(mapName) {
+    	var texture = planeMaterial[mapName];
+    	texture.wrapS = THREE.RepeatWrapping;
+    	texture.wrapT = THREE.RepeatWrapping;
+    	texture.repeat.set(10, 10);
+    })
+    ```
+
+    - For this example, I used a checkerboard texture to make the effect easier to see:
+
+        ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/eb63da3a-a4e5-46f6-add0-9a413c2c057b/image.png)
+
+
+## Environment Maps
+
+- Used to simulate reflective surfaces. The texture applied is often a cube or panoramic map of the surrounding environment.
+    - `sphereMaterial.envMap = reflectionCube;`
+
+### Cubemap
+
+```jsx
+	var path = '/src/textures/cubemap/';
+	var format = '.jpg';
+	var urls = [
+		path + 'px' + format, path + 'nx' + format,
+		path + 'py' + format, path + 'ny' + format,
+		path + 'pz' + format, path + 'nz' + format
+	];
+	var reflectionCube = new THREE.CubeTextureLoader().load(urls);
+	reflectionCube.format = THREE.RGBFormat;
+```
+
+![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/2e95bbba-ed64-489b-bdae-a56031f96dbd/image.png)
+
+### Skybox
+
+- We can use the `cubeMap` as a skybox as well:
+    - `scene.background = reflectionCube`
+
 # Geometries
+
+## Primitive Geometries
+
+## Manipulating Vertices
+
+## External Geometries
 
 # Particles
 
+## Creating a Particle System
+
+## Animating the Particle System
+
+## Particle System from Geometry
+
+## Stats.js
+
 # Post-Processing
+
+## Post-processing
+
+## EffectComposer
+
+## Other Shaders
