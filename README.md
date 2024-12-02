@@ -28,52 +28,6 @@ console.log(THREE); // This should output THREE object in the console, confirmin
 - A **Camera** is another required object.
 - A **Renderer** is the final required object. Different renderers allow for different visual effects.
 
-```jsx
-function init() {
-  var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera(
-    45,
-    window.innerWidth / window.innerHeight,
-    1,
-    1000
-  );
-  var renderer = new THREE.WebGLRenderer();
-
-  // Set the size of the renderer
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  // We need to append the rendered to the DOM
-  document.getElementById("app").appendChild(renderer.domElement);
-  renderer.render(scene, camera);
-}
-
-init();
-```
-
-- The **`renderer.domElement`** is essentially an **`<canvas>`** element created by Three.js
-
-## Populate The Scene
-
-- 3D Objects are made of two parts:
-    - The **Geometry** the defines the shape of the mesh (the verticies)
-    - The **Materials** which defines the textures and shader effects projected onto the mesh.
-
-    ```jsx
-    function getBox(w,h,d) {
-      var geometry = new THREE.BoxGeometry(1, 1, 1);
-      var material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Mesh basic material is not affected by light, so is always visible and has a constant color.
-      var mesh = new THREE.Mesh(geometry, material);
-
-      return mesh;
-    }
-
-    //then in the init function:
-      var box = getBox(1, 1, 1);
-      scene.add(box);
-    ```
-
-    - The above still won’t work, because both the box mesh and the camera are in position 0,0,0 (the origin). We can move the camera to see the box.
-
     ```jsx
     function init() {
       var scene = new THREE.Scene();
@@ -83,12 +37,7 @@ init();
         1,
         1000
       );
-      camera.position.z = 5;
       var renderer = new THREE.WebGLRenderer();
-
-      // Create a box
-      var box = getBox(1, 1, 1);
-      scene.add(box);
 
       // Set the size of the renderer
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -97,20 +46,72 @@ init();
       document.getElementById("app").appendChild(renderer.domElement);
       renderer.render(scene, camera);
     }
+
+    init();
     ```
+
+- The **`renderer.domElement`** is essentially an **`<canvas>`** element created by Three.js
+
+## Populate The Scene
+
+- 3D Objects are made of two parts:
+    - The **Geometry** the defines the shape of the mesh (the verticies)
+    - The **Materials** which defines the textures and shader effects projected onto the mesh.
+
+        ```jsx
+        function getBox(w,h,d) {
+          var geometry = new THREE.BoxGeometry(1, 1, 1);
+          var material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Mesh basic material is not affected by light, so is always visible and has a constant color.
+          var mesh = new THREE.Mesh(geometry, material);
+
+          return mesh;
+        }
+
+        //then in the init function:
+          var box = getBox(1, 1, 1);
+          scene.add(box);
+        ```
+
+    - The above still won’t work, because both the box mesh and the camera are in position 0,0,0 (the origin). We can move the camera to see the box.
+
+        ```jsx
+        function init() {
+          var scene = new THREE.Scene();
+          var camera = new THREE.PerspectiveCamera(
+            45,
+            window.innerWidth / window.innerHeight,
+            1,
+            1000
+          );
+          camera.position.z = 5;
+          var renderer = new THREE.WebGLRenderer();
+
+          // Create a box
+          var box = getBox(1, 1, 1);
+          scene.add(box);
+
+          // Set the size of the renderer
+          renderer.setSize(window.innerWidth, window.innerHeight);
+
+          // We need to append the rendered to the DOM
+          document.getElementById("app").appendChild(renderer.domElement);
+          renderer.render(scene, camera);
+        }
+        ```
 
 - Along with moving the camera’s position and rotation directly, we can use the `lookAt` method to have the camera point at specific point or object.
     - `camera.lookAt(new THREE.Vector3(0, 0, 0));`
     - `camera.lookAt(box.position);`
 - It's best practice to handle window resizing dynamically by attaching a **`resize`** event listener. Without this, resizing the browser window will not update the camera aspect ratio or renderer size.
 
-```jsx
-javascriptwindow.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-```
+    ```jsx
+    javascriptwindow.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    ```
+
 
 ## Create a Plane
 
@@ -175,11 +176,12 @@ init();
 
 - To convert **degrees** to **radians:**
 
-```jsx
-const toRadians = (degrees) => degrees * (Math.PI / 180);
-plane.rotation.x = toRadians(90);
+    ```jsx
+    const toRadians = (degrees) => degrees * (Math.PI / 180);
+    plane.rotation.x = toRadians(90);
 
-```
+    ```
+
 
 # Three.js Scene Object
 
@@ -234,29 +236,30 @@ plane.rotation.x = toRadians(90);
 - We can give our plane object a name with `plane.name = 'plane-1';`
 - Then we can refer to it with `getObjectByName()` and change it’s rotation in the update method. This will cause it to have an animated rotation since it’s in the update method which refreshes 60 times per second.
 
-```jsx
-function update(renderer, scene, camera) {
-  renderer.render(scene, camera);
+    ```jsx
+    function update(renderer, scene, camera) {
+      renderer.render(scene, camera);
 
-  var plane = scene.getObjectByName('plane-1');
-  plane.rotation.y += 0.001;
-  plane.rotation.z += 0.001;
+      var plane = scene.getObjectByName('plane-1');
+      plane.rotation.y += 0.001;
+      plane.rotation.z += 0.001;
 
-  requestAnimationFrame(function () {
-    update(renderer, scene, camera);
-  });
-}
-```
+      requestAnimationFrame(function () {
+        update(renderer, scene, camera);
+      });
+    }
+    ```
 
 - The `traverse()` method allows use to traverse up and down the hierarchy, allowing us to reference an object’s children and/or parents.
 - The callback in **`traverse()`** is applied to all objects in the scene, including the parent itself.
 
-```jsx
-  // This will traverse through all the children of the scene and apply the function to each child. In this case, we are scaling the x-axis of each child by 0.001.
-  scene.traverse(function(child) {
-    child.scale.x += 0.001;
-  })
-```
+    ```jsx
+      // This will traverse through all the children of the scene and apply the function to each child. In this case, we are scaling the x-axis of each child by 0.001.
+      scene.traverse(function(child) {
+        child.scale.x += 0.001;
+      })
+    ```
+
 
 ## Add Fog To A Scene
 
@@ -288,11 +291,11 @@ function update(renderer, scene, camera) {
 - `var gui = new dat.GUI();` This will create a GUI
 - After creating a GUI, we can add controls to it by specifying the object, the property we want to change, then the min and max values.
 
-```jsx
-  // GUI Controls
-  gui.add(pointLight, 'intensity', 0, 10);
-  gui.add(pointLight.position, 'y', 0, 5);
-```
+    ```jsx
+      // GUI Controls
+      gui.add(pointLight, 'intensity', 0, 10);
+      gui.add(pointLight.position, 'y', 0, 5);
+    ```
 
 - For the `Y Position`, we need to reference the parent object. Since `y` is inside of pointLight’s position property, we use `pointLight.position` for the object name.
 
@@ -300,7 +303,8 @@ function update(renderer, scene, camera) {
 
 - Allows you to rotate the camera around the scene with the mouse
 
-[three.js/examples/jsm/controls/OrbitControls.js at master · mrdoob/three.js](https://github.com/mrdoob/three.js/blob/master/examples/jsm/controls/OrbitControls.js)
+    [three.js/examples/jsm/controls/OrbitControls.js at master · mrdoob/three.js](https://github.com/mrdoob/three.js/blob/master/examples/jsm/controls/OrbitControls.js)
+
 
 ### OrbitControls.js
 
@@ -1327,17 +1331,18 @@ Object.defineProperties( THREE.OrbitControls.prototype, {
     - Don’t forget to put it as an argument for the recursive call inside of the update function.
 - Add `controls.update()` to the function
 
-```jsx
-function update(renderer, scene, camera, controls) {
-  renderer.render(scene, camera);
+    ```jsx
+    function update(renderer, scene, camera, controls) {
+      renderer.render(scene, camera);
 
-  controls.update();
+      controls.update();
 
-  requestAnimationFrame(function () {
-    update(renderer, scene, camera, controls);
-  });
-}
-```
+      requestAnimationFrame(function () {
+        update(renderer, scene, camera, controls);
+      });
+    }
+    ```
+
 
 ## Shadows
 
@@ -1350,30 +1355,31 @@ function update(renderer, scene, camera, controls) {
 
 - For further testing, the single box object was replaced by a grid of boxes, creating using the following function:
 
-```jsx
-function getBoxGrid(amount, separationMultiplier) {
-  var group = new THREE.Group();
+    ```jsx
+    function getBoxGrid(amount, separationMultiplier) {
+      var group = new THREE.Group();
 
-  for (var i = 0; i < amount; i++) {
-    var obj = getBox(1, 1, 1);
+      for (var i = 0; i < amount; i++) {
+        var obj = getBox(1, 1, 1);
 
-    obj.position.x = i * separationMultiplier;
-    obj.position.y = obj.geometry.parameters.height / 2;
-    group.add(obj);
-    for (var j = 1; j < amount; j++) {
-      var obj = getBox(1, 1, 1);
-      obj.position.x = i * separationMultiplier;
-      obj.position.y = obj.geometry.parameters.height / 2;
-      obj.position.z = j * separationMultiplier;
-      group.add(obj);
+        obj.position.x = i * separationMultiplier;
+        obj.position.y = obj.geometry.parameters.height / 2;
+        group.add(obj);
+        for (var j = 1; j < amount; j++) {
+          var obj = getBox(1, 1, 1);
+          obj.position.x = i * separationMultiplier;
+          obj.position.y = obj.geometry.parameters.height / 2;
+          obj.position.z = j * separationMultiplier;
+          group.add(obj);
+        }
+      }
+      group.position.x = -(separationMultiplier * (amount - 1)) / 2;
+      group.position.z = -(separationMultiplier * (amount - 1)) / 2;
+
+      return group;
     }
-  }
-  group.position.x = -(separationMultiplier * (amount - 1)) / 2;
-  group.position.z = -(separationMultiplier * (amount - 1)) / 2;
+    ```
 
-  return group;
-}
-```
 
 ## SpotLight
 
@@ -1420,23 +1426,23 @@ function getBoxGrid(amount, separationMultiplier) {
 
 - The `Math.random()` function is what it sounds like.
 
-```jsx
-function update(renderer, scene, camera, controls) {
-  renderer.render(scene, camera);
+    ```jsx
+    function update(renderer, scene, camera, controls) {
+      renderer.render(scene, camera);
 
-  var boxGrid = scene.getObjectByName("boxGrid");
-  boxGrid.children.forEach(function (child) {
-    child.scale.y = Math.random();
-    child.position.y = child.scale.y / 2; // This will make the boxes stand on the plane.
-  })
+      var boxGrid = scene.getObjectByName("boxGrid");
+      boxGrid.children.forEach(function (child) {
+        child.scale.y = Math.random();
+        child.position.y = child.scale.y / 2; // This will make the boxes stand on the plane.
+      })
 
-  controls.update();
+      controls.update();
 
-  requestAnimationFrame(function () {
-    update(renderer, scene, camera, controls);
-  });
-}
-```
+      requestAnimationFrame(function () {
+        update(renderer, scene, camera, controls);
+      });
+    }
+    ```
 
 - Don’t forget to give the object your animating a name, such as [`boxGrid.name](http://boxgrid.name/) = "boxGrid";`
     - Just because I named the variable boxGrid, does not mean that it’s name property is boxGrid, that has to be set manually.
@@ -1447,34 +1453,179 @@ function update(renderer, scene, camera, controls) {
 - We will use the `getElapsedTime()` method with `Math.sin()` to get the elapsed time since the start of the application and feed it into the sine function.
 - For the getElapsedTime() you need to create a clock object  with `var clockName = new THREE.Clock();` and pass it into the update function.
 
-```jsx
-function update(renderer, scene, camera, controls, clock) {
-  renderer.render(scene, camera);
-  controls.update();
+    ```jsx
+    function update(renderer, scene, camera, controls, clock) {
+      renderer.render(scene, camera);
+      controls.update();
 
-  var timeElapsed = clock.getElapsedTime(); // Time elapsed since the javascript started running.
+      var timeElapsed = clock.getElapsedTime(); // Time elapsed since the javascript started running
 
-  var boxGrid = scene.getObjectByName("boxGrid");
-  boxGrid.children.forEach(function (child) {
-    child.scale.y = (Math.sin(timeElapsed * 2) + 1) / 2 + 0.001; // Sine function will give us a value between -1 and 1. We add 1 to make it between 0 and 2. Then we divide it by 2 to make it between 0 and 1. We add 0.001 to avoid the scale being 0 and the object entering the same plane as the ground plane. We can multiply the timeElapsed by a number to make the animation faster or slower, in this case 2.
-    child.position.y = child.scale.y / 2;
-  });
+      var boxGrid = scene.getObjectByName("boxGrid");
+      boxGrid.children.forEach(function (child, index) {
+        child.scale.y = (Math.sin(timeElapsed * 3 + index) + 1) / 2 + 0.001; // Sine function will give us a value between -1 and 1. We add 1 to make it between 0 and 2. Then we divide it by 2 to make it between 0 and 1. We add 0.001 to avoid the scale being 0 and the object entering the same plane as the ground plane. We can multiply the timeElapsed by a number to make the animation faster or slower, in this case 2. We also incorporated the forEach loop's index to make the animation different for each box.
+        child.position.y = child.scale.y / 2;
+      });
 
-  requestAnimationFrame(function () {
-    update(renderer, scene, camera, controls, clock);
-  });
-}
-```
+      requestAnimationFrame(function () {
+        update(renderer, scene, camera, controls, clock);
+      });
+    }
+    ```
+
 
 ## Add Noise
 
+- Perlin Noise library:
+
+    [GitHub - josephg/noisejs: Javascript 2D Perlin & Simplex noise functions](https://github.com/josephg/noisejs)
+
+- We can change the `Math.sin()` function we used to `noise.simplex2()` which will give a random result.
+
+    ```jsx
+    function update(renderer, scene, camera, controls, clock) {
+      renderer.render(scene, camera);
+      controls.update();
+
+      var timeElapsed = clock.getElapsedTime();
+
+      var boxGrid = scene.getObjectByName("boxGrid");
+      boxGrid.children.forEach(function (child, index) {
+        var x = timeElapsed * 1 + index;
+        child.scale.y = (noise.simplex2(x, x) + 1) / 2 + 0.001;
+        child.position.y = child.scale.y / 2;
+      });
+
+      requestAnimationFrame(function () {
+        update(renderer, scene, camera, controls, clock);
+      });
+    }
+    ```
+
+- `noise.simplex2()` takes two arguments:
+    - `x` width in 2D space
+    - `y` height in 2D space
+
 ## Camera
+
+- For a **Orthographic Camera,** use this method with different arguments:
+
+    ```jsx
+      var camera = new THREE.OrthographicCamera(
+        -15, // Left boundary of view frustum
+        15, // Right boundary of view frustum
+        15, // Top boundary of view frustum
+        -15, // Bottom boundary of view frustum
+        0.001, // Near Clipping Plane
+        1000 // Far Clipping Plane
+      );
+    ```
+
 
 ## Animation Rig part 1
 
-## Animation Rig part 2
+- Helper objects that facilitate the animation process. An armature for character animation is a type of animation rig.
+- For our camera rig, we start by making a `group` and adding the properties we wish to transform. Notice they are added in groups in a hierarchy.
+
+    ```jsx
+
+      var cameraZRotation = new THREE.Group();
+      var cameraZPosition = new THREE.Group();
+      var cameraXRotation = new THREE.Group();
+      var cameraYRotation = new THREE.Group();
+      var cameraYPosition = new THREE.Group();
+
+      cameraZRotation.name = "cameraZRotation";
+      cameraZPosition.name = "cameraZPosition";
+      cameraXRotation.name = "cameraXRotation";
+      cameraYRotation.name = "cameraYRotation";
+      cameraYPosition.name = "cameraYPosition";
+
+      cameraZRotation.add(camera);
+      cameraYPosition.add(cameraZRotation);
+      cameraZPosition.add(cameraYPosition);
+      cameraXRotation.add(cameraZPosition);
+      cameraYRotation.add(cameraXRotation);
+      scene.add(cameraYRotation);
+
+      cameraYPosition.position.y = 1; // to have the camera above the ground
+      cameraZPosition.position.z = 70;
+      cameraXRotation.rotation.x = -Math.PI / 2;
+
+      gui.add(cameraZPosition.position, 'z', 0, 100);
+      gui.add(cameraYRotation.rotation, 'y', -Math.PI, Math.PI);
+      gui.add(cameraXRotation.rotation, 'x', -Math.PI, Math.PI);
+      gui.add(cameraZRotation.rotation, 'z', -Math.PI, Math.PI);
+    ```
+
+    - Note that three.js uses radians instead of degrees for rotation. This is because radians (the measurement around the circles’ edge) require less calculations then degrees (splitting up the circle into 360 sections).
+- In the update function, we get the camera x, y, and z names we assigned the groups to animate the camera.
+
+    ```jsx
+    function update(renderer, scene, camera, controls, clock) {
+      renderer.render(scene, camera);
+      controls.update();
+
+      var timeElapsed = clock.getElapsedTime();
+
+      var cameraZPosition = scene.getObjectByName("cameraZPosition");
+      var cameraZRotation = scene.getObjectByName("cameraZRotation");
+      var cameraXRotation = scene.getObjectByName("cameraXRotation");
+
+      cameraZPosition.position.z -= 0.25;
+      cameraZRotation.rotation.z = noise.simplex2(timeElapsed, timeElapsed) * 0.05;
+      if (cameraXRotation.rotation.x < 0) {
+        cameraXRotation.rotation.x += 0.01;
+      }
+
+      var boxGrid = scene.getObjectByName("boxGrid");
+      boxGrid.children.forEach(function (child, index) {
+        child.scale.y = (noise.simplex2(timeElapsed + index, timeElapsed + index) + 1) / 2 + 0.001;
+        child.position.y = child.scale.y / 2;
+      });
+
+      requestAnimationFrame(function () {
+        update(renderer, scene, camera, controls, clock);
+      });
+    }
+    ```
+
 
 ## Tween.js
+
+- Tween.js gives you more control over the duration, timing, and style of animations using ease-in and ease-out curves.
+
+    [GitHub - tweenjs/tween.js: JavaScript/TypeScript animation engine](https://github.com/tweenjs/tween.js)
+
+- With `Tween.js` we don’t need to have animations in the update() function, we just need to call `TWEEN.update();` in the function, and have our animation code in the main body somewhere.
+- Removed the `cameraZPosition` and `cameraXRotation` and put them in the `init()` function with `Tween.js`
+
+    ```jsx
+    new TWEEN.Tween({ val: 100 })
+      .to({ val: -50 }, 12000)
+      .onUpdate(function() {
+        cameraZPosition.position.z = this.val;
+      })
+      .start();
+
+    new TWEEN.Tween({val: -Math.PI / 2})
+      .to({val: 0}, 4000)
+      .delay(4000)
+      .easing(TWEEN.Easing.Quintic.InOut)
+      .onUpdate(function() {
+        cameraXRotation.rotation.x = this.val;
+      })
+      .start();
+    ```
+
+    - The first argument is the starting value.
+    - `.to` arguments are the ending value and the time it will take in milliseconds.
+    - `.delay` is the delay before starting the animation, again in milliseconds.
+    - `.easing` sets the type of animation curve. To see all curves:
+
+        [Tween.js / graphs](https://sole.github.io/tween.js/examples/03_graphs.html)
+
+    - `.onUpdate` takes a call back function, where you set the property you are animating based on the arguments names.
+    - `.start` don’t forget to enter this to start them.
 
 # Materials and Textures
 
