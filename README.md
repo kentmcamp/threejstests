@@ -1818,24 +1818,326 @@ Object.defineProperties( THREE.OrbitControls.prototype, {
 
 ## Primitive Geometries
 
+- Three.js has multiple types of basic meshes:
+
+```jsx
+function getGeometry(type, size, material) {
+	var geometry;
+	var segmentMultiplier = 1;
+
+	switch (type) {
+		case 'box':
+			geometry = new THREE.BoxGeometry(size, size, size);
+			break;
+		case 'cone':
+			geometry = new THREE.ConeGeometry(size, size, 256*segmentMultiplier);
+			break;
+		case 'cylinder':
+			geometry = new THREE.CylinderGeometry(size, size, size, 32*segmentMultiplier);
+			break;
+		case 'octahedron':
+			geometry = new THREE.OctahedronGeometry(size);
+			break;
+		case 'sphere':
+			geometry = new THREE.SphereGeometry(size, 32*segmentMultiplier, 32*segmentMultiplier);
+			break;
+		case 'tetrahedron':
+			geometry = new THREE.TetrahedronGeometry(size);
+			break;
+		case 'torus':
+			geometry = new THREE.TorusGeometry(size/2, size/4, 16*segmentMultiplier, 100*segmentMultiplier);
+			break;
+		case 'torusKnot':
+			geometry = new THREE.TorusKnotGeometry(size/2, size/6, 256*segmentMultiplier, 100*segmentMultiplier);
+			break;
+		default:
+			break;
+	}
+```
+
+- To see edges and vertices, you can just enable the wireframe property when passing material properties: `wireframe: true`
+
+    ```
+    function getMaterial(type, color) {
+    	var selectedMaterial;
+    	var materialOptions = {
+    		color: color === undefined ? 'rgb(255, 255, 255)' : color,
+            wireframe: true,
+    	};
+
+    	switch (type) {
+    		case 'basic':
+    			selectedMaterial = new THREE.MeshBasicMaterial(materialOptions);
+    			break;
+    		case 'lambert':
+    			selectedMaterial = new THREE.MeshLambertMaterial(materialOptions);
+    			break;
+    		case 'phong':
+    			selectedMaterial = new THREE.MeshPhongMaterial(materialOptions);
+    			break;
+    		case 'standard':
+    			selectedMaterial = new THREE.MeshStandardMaterial(materialOptions);
+    			break;
+    		default:
+    			selectedMaterial = new THREE.MeshBasicMaterial(materialOptions);
+    			break;
+    	}
+
+    	return selectedMaterial;
+    }
+    ```
+
+- Three.js will allow you to increase the number of polygons (segments).
+
 ## Manipulating Vertices
 
+- 3D meshes have a property called `geometry` and `geometry` has a property named `vertices` . Using this, we can manipulate a mesh’s individual verticies:
+
+    ```jsx
+    function update(renderer, scene, camera, controls) {
+    	controls.update();
+
+        var plane = scene.getObjectByName('plane-1');
+        var planeGeo = plane.geometry;
+        planeGeo.vertices.forEach(function(vertex) {
+            vertex.z = Math.random();
+        })
+
+    	renderer.render(scene, camera);
+    	requestAnimationFrame(function() {
+    		update(renderer, scene, camera, controls);
+    	});
+    }
+    ```
+
+- The code above will use `Math.random()` to randomize the placement of every vertex on the z-axis of the plane, but only once even though it’s in the `update()` function.
+- The reason it doesn’t generate a new number 60 or so frames per second is because geometry operations are computationally expensive, so **Three.js will not check them more than once unless explicitly directed to.**
+    - `planeGeo.verticesNeedUpdate = true`
+- We can incorporate the `THREE.Clock()` and `Math.sin()` to have a less chaotically random effect:
+
+    ```jsx
+    function update(renderer, scene, camera, controls, clock) {
+    	controls.update();
+
+        var elapsedTime = clock.getElapsedTime();
+
+        var plane = scene.getObjectByName('plane-1');
+        var planeGeo = plane.geometry;
+        planeGeo.vertices.forEach(function(vertex, index) {
+            vertex.z += Math.sin(elapsedTime + index * 0.1) * 0.005;
+        })
+        planeGeo.verticesNeedUpdate = true;
+
+    	renderer.render(scene, camera);
+    	requestAnimationFrame(function() {
+    		update(renderer, scene, camera, controls, clock);
+    	});
+    }
+    ```
+
+
 ## External Geometries
+
+- Some Common 3D File Formats Three.js supports are…
+    - FBX
+    - OBJ
+    - STL
+- To load an external file type, you will need it’s corresponding loader:
+
+[Loaders · Issue #5524 · mrdoob/three.js](https://github.com/mrdoob/three.js/issues/5524)
+
+[three.js docs](https://threejs.org/docs/#examples/en/loaders/OBJLoader)
+
+```jsx
+	loader.load('/src/head/lee-perry-smith-head-scan.obj', function (object) {
+		var colorMap = textureLoader.load('/src/head/Face_Color.jpg');
+		var bumpMap = textureLoader.load('/src/head/Face_Disp.jpg');
+		var faceMaterial = getMaterial('standard', 'rgb(255, 255, 255)');
+
+		object.traverse(function(child) {
+			if (child.name == 'Plane') {
+				child.visible = false;
+			}
+			if (child.name == 'Infinite') {
+				child.material = faceMaterial;
+				faceMaterial.roughness = 0.875;
+				faceMaterial.map = colorMap;
+				faceMaterial.bumpMap = bumpMap;
+				faceMaterial.roughnessMap = bumpMap;
+				faceMaterial.metalness = 0;
+				faceMaterial.bumpScale = 0.175;
+			}
+		} );
+
+		object.scale.x = 20;
+		object.scale.y = 20;
+		object.scale.z = 20;
+
+		object.position.z = 0;
+		object.position.y = -2;
+		scene.add(object);
+	});
+```
 
 # Particles
 
 ## Creating a Particle System
 
+```jsx
+// Particle System
+var particleGeo = new THREE.Geometry();
+var particleMat = new THREE.PointsMaterial ({
+    color: 'rgb(255,255,255)',
+    size: 0.5,
+    map: new THREE.TextureLoader().load(`/src/textures/particle.jpg`),
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+});
+
+var particleCount = 20000;
+var particleDistance = 100;
+
+for (var i=0; i<particleCount; i++) {
+    var posX = (Math.random() - 0.5) * particleDistance;
+    var posY = (Math.random() - 0.5) * particleDistance;
+    var posZ = (Math.random() - 0.5) * particleDistance;
+    var particle = new THREE.Vector3(posX, posY, posZ);
+
+    particleGeo.vertices.push(particle);
+}
+
+var particleSystem = new THREE.Points(particleGeo, particleMat);
+scene.add(particleSystem);
+```
+
 ## Animating the Particle System
+
+- Like other objects we wish to update that are initiated in the `init()` function, we have to give it a name to access it from the `update()` function:
+    - `particleSystem.name = 'particleSystem';`
+
+```jsx
+function update(renderer, scene, camera, controls) {
+  controls.update();
+  renderer.render(scene, camera);
+
+  var particleSystem = scene.getObjectByName("particleSystem");
+  particleSystem.rotation.y += 0.003;
+
+  particleSystem.geometry.vertices.forEach(function (particle) {
+    particle.x += (Math.random() - 1) * 0.1;
+    particle.y += (Math.random() - 0.75) * 0.1;
+    particle.z += Math.random() * 0.1;
+
+    if (particle.x < -50) {
+        particle.x = 50;
+    }
+    if (particle.y < -50) {
+        particle.y = 50;
+    }
+    if (particle.z < -50) {
+        particle.z = 50;
+    }
+    if (particle.z > 50) {
+        particle.z = -50;
+    }
+
+  });
+  particleSystem.geometry.verticesNeedUpdate = true;
+
+  requestAnimationFrame(function () {
+    update(renderer, scene, camera, controls);
+  });
+}
+```
 
 ## Particle System from Geometry
 
+- The above example used `empty geometry` and populated it with particles. We can also `geometry meshes` to see and contain our particle system.
+
+    ```jsx
+    var particleMat = new THREE.PointsMaterial({
+    	color: "rgb(255,255,255)",
+    	size: 0.25,
+    	map: new THREE.TextureLoader().load(`/src/textures/particle.jpg`),
+    	transparent: true,
+    	blending: THREE.AdditiveBlending,
+    	depthWrite: false,
+    });
+
+    var particleGeo = new THREE.SphereGeometry(10,32,32);
+
+    var particleSystem = new THREE.Points(particleGeo, particleMat);
+    particleSystem.name = "particleSystem";
+    scene.add(particleSystem);
+    ```
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/09016d34-64e6-46c3-a39a-45fad1a83aef/image.png)
+
+
 ## Stats.js
+
+- We can use `Stats.js` library to monitor performance. It creates a graph that displays information like frames per seconds, ram being used, and frames in miliseconds.
+
+    [GitHub - mrdoob/stats.js: JavaScript Performance Monitor](https://github.com/mrdoob/stats.js)
+
+    ```jsx
+      var stats = new Stats();
+      document.body.appendChild(stats.dom);
+      update(renderer, scene, camera, controls, stats); // pass to update function
+
+      //in update function
+      stats.update();
+    ```
+
+    ![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/97df4559-1f0d-45e5-ad42-87380310e87a/3ca11efc-91c6-43c6-9fb4-ad8c623cae88/image.png)
+
 
 # Post-Processing
 
 ## Post-processing
 
+- A `shader` describes how the GPU should render the pixels.
+- You need to use a different language called `GLSL` to create custom shaders.
+- You can find pre-written post processing shaders at:
+
+    [three.js/examples/jsm/shaders at dev · mrdoob/three.js](https://github.com/mrdoob/three.js/tree/dev/examples/jsm/shaders)
+
+
 ## EffectComposer
 
+- In order to have multiple shader passes, we need to create an effect composer object to pass to the `update()` function instead of the renderer.
+
+```jsx
+var composer = new THREE.EffectComposer(renderer);
+var renderPass = new THREE.RenderPass(scene, camera);
+renderPass.renderToScreen = true;
+composer.addPass(renderPass);
+
+update(composer, scene, camera, controls, clock);
+```
+
+- The last shader pass needs to have the `renderToScreen = true`  attribute enabled.
+- Now that the `effectComposer` is set up, we can add shader passes:
+
+    ```jsx
+    var composer = new THREE.EffectComposer(renderer);
+    var renderPass = new THREE.RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    var vignetteEffect = new THREE.ShaderPass(THREE.VignetteShader);
+    vignetteEffect.uniforms['darkness'].value = 1.75;
+    composer.addPass(vignetteEffect);
+
+    var rgbShiftShader = new THREE.ShaderPass(THREE.RGBShiftShader);
+    rgbShiftShader.uniforms['amount'].value = 0.003;
+    rgbShiftShader.renderToScreen = true;
+    composer.addPass(rgbShiftShader);
+    ```
+
+
 ## Other Shaders
+
+[GitHub - felixturner/bad-tv-shader: BadTV Effect for Three.js](https://github.com/felixturner/bad-tv-shader)
+
+- Click on `View Demo` in the repo’s readme file to see the different parameters you change from the gui controllers.
